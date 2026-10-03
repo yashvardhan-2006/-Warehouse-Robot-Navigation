@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AMR Warehouse Robot Pathfinding Visualizer (Full-Stack Python + Web UI)</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-icon">🤖</div>
+      <div class="brand-text">
+        <h1>AMR Warehouse Pathfinding Benchmark</h1>
+        <p id="backendStatus" style="font-size: 11px; font-weight: 600; color: #34d399;">Checking Python Backend Connection...</p>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <select id="presetSelect" class="btn">
+        <option value="amazon">📦 Amazon Fulfillment Center</option>
+        <option value="bottleneck">🚧 Bottleneck Maze</option>
+        <option value="dense">🏭 Dense Storage Racks</option>
+        <option value="traffic">⚠️ Heavy Traffic Depot</option>
+        <option value="empty">⬜ Empty Arena</option>
+      </select>
+      <button id="btnClear" class="btn btn-danger">🧹 Clear Grid</button>
+    </div>
+  </header>
+
+  <!-- App Main Layout Grid -->
+  <div class="app-container">
+
+    <!-- Left Tool Sidebar -->
+    <aside class="sidebar">
+      <div class="section-title">Interactive Paint Palette</div>
+      <div class="tool-group">
+        <button class="tool-btn active" data-tool="obstacle">
+          <span>🧱 Steel Wall Barrier</span>
+          <div class="tool-badge" style="background: #374151;"></div>
+        </button>
+        <button class="tool-btn" data-tool="shelf">
+          <span>📦 Shelf Storage Rack</span>
+          <div class="tool-badge" style="background: #b45309;"></div>
+        </button>
+        <button class="tool-btn" data-tool="traffic">
+          <span>⚠️ Heavy Traffic (Cost: 3)</span>
+          <div class="tool-badge" style="background: #78350f;"></div>
+        </button>
+        <button class="tool-btn" data-tool="start">
+          <span>🚀 Robot Start Dock (S)</span>
+          <div class="tool-badge" style="background: #10b981;"></div>
+        </button>
+        <button class="tool-btn" data-tool="goal">
+          <span>🎯 Pickup Target (G)</span>
+          <div class="tool-badge" style="background: #ef4444;"></div>
+        </button>
+        <button class="tool-btn" data-tool="clear">
+          <span>🧹 Clear Floor Tile</span>
+          <div class="tool-badge" style="background: #111827;"></div>
+        </button>
+      </div>
+
+      <div class="section-title" style="margin-top: 10px;">Algorithm Legend</div>
+      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: var(--text-muted);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 12px; height: 12px; border-radius: 2px; background: #c084fc;"></div>
+          <span>A* Search Path</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 12px; height: 12px; border-radius: 2px; background: #38bdf8;"></div>
+          <span>Dijkstra Path</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 12px; height: 12px; border-radius: 2px; background: #fb923c;"></div>
+          <span>BFS Path</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 12px; height: 12px; border-radius: 2px; background: #f59e0b;"></div>
+          <span>Frontier Open Set</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Visualizer Area -->
+    <main class="main-content">
+
+      <!-- Playback Controls -->
+      <div class="playback-bar">
+        <div class="playback-controls">
+          <button id="btnPlay" class="btn btn-primary">▶ Play</button>
+          <button id="btnStepBack" class="btn">◀ Back</button>
+          <button id="btnStepForward" class="btn">Step ▶</button>
+          <button id="btnReset" class="btn">⏪ Reset</button>
+        </div>
+
+        <div class="slider-container">
+          <label id="stepCounter">Step 0 of 0</label>
+          <input type="range" id="stepScrubber" min="0" max="100" value="0">
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="3" style="width: 80px;">
+        </div>
+      </div>
+
+      <!-- Side-by-Side 3-Canvas Visualizer Stage -->
+      <div class="stage-container">
+
+        <!-- A* Search Card -->
+        <div class="canvas-card card-astar">
+          <div class="canvas-card-header">
+            <div class="canvas-card-title">
+              <span>🟣 A* Search</span>
+              <span class="badge-tag badge-astar">Python Solver</span>
+            </div>
+          </div>
+          <div class="canvas-wrapper">
+            <canvas id="canvasAStar"></canvas>
+          </div>
+          <div class="card-stats">
+            <div class="stat-box">
+              <div class="stat-label">Path Cost</div>
+              <div id="distAStar" class="stat-val" style="color: #c084fc;">0.0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Explored Cells</div>
+              <div id="expAStar" class="stat-val">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Heuristic</div>
+              <div class="stat-val" style="font-size: 12px; color: #94a3b8; margin-top:4px;">Manhattan</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dijkstra Card -->
+        <div class="canvas-card card-dijkstra">
+          <div class="canvas-card-header">
+            <div class="canvas-card-title">
+              <span>🔵 Dijkstra's Algorithm</span>
+              <span class="badge-tag badge-dijkstra">Python Solver</span>
+            </div>
+          </div>
+          <div class="canvas-wrapper">
+            <canvas id="canvasDijkstra"></canvas>
+          </div>
+          <div class="card-stats">
+            <div class="stat-box">
+              <div class="stat-label">Path Cost</div>
+              <div id="distDijkstra" class="stat-val" style="color: #38bdf8;">0.0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Explored Cells</div>
+              <div id="expDijkstra" class="stat-val">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Priority Queue</div>
+              <div class="stat-val" style="font-size: 12px; color: #94a3b8; margin-top:4px;">Min-Heap g(n)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BFS Card -->
+        <div class="canvas-card card-bfs">
+          <div class="canvas-card-header">
+            <div class="canvas-card-title">
+              <span>🟠 Breadth-First Search</span>
+              <span class="badge-tag badge-bfs">Python Solver</span>
+            </div>
+          </div>
+          <div class="canvas-wrapper">
+            <canvas id="canvasBFS"></canvas>
+          </div>
+          <div class="card-stats">
+            <div class="stat-box">
+              <div class="stat-label">Path Cost</div>
+              <div id="distBFS" class="stat-val" style="color: #fb923c;">0.0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Explored Cells</div>
+              <div id="expBFS" class="stat-val">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Queue Type</div>
+              <div class="stat-val" style="font-size: 12px; color: #94a3b8; margin-top:4px;">FIFO Queue</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Analytics Dashboard & Verdict -->
+      <div class="analytics-section">
+
+        <!-- Benchmarking Table -->
+        <div class="chart-card">
+          <h3>📊 Algorithm Benchmarking Matrix (Python Backend Computations)</h3>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Algorithm</th>
+                  <th>Path Found</th>
+                  <th>Total Cost</th>
+                  <th>Hops</th>
+                  <th>Explored</th>
+                  <th>Efficiency</th>
+                  <th>Latency</th>
+                </tr>
+              </thead>
+              <tbody id="benchmarkTbody">
+                <!-- Dynamically populated from Python Backend API -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Key Verdict Banner -->
+        <div class="chart-card">
+          <h3>📌 Heuristic Efficiency Verdict</h3>
+          <div class="verdict-banner">
+            <div class="verdict-icon">💡</div>
+            <div class="verdict-text">
+              <h4>A* Manhattan Heuristic Savings</h4>
+              <p id="verdictText">Calculating heuristic performance benefits...</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
